@@ -1,0 +1,45 @@
+{
+
+	"common": {
+		"user": "TBD",
+		"password": "TBD",
+		"secret": "this-is-super-secret",
+		"snmp-community": "this-is-also-secret",
+		"snmp-server": "10.200.200.XXX",
+		"syslog-server": "10.200.200.XXX",
+		"acl-cloud-prefix": "10.200.0.0/16"
+	},
+	"sample_sw_48port": {
+		"port": 48,
+		"use-gbe-uplink-port": 4,
+		"use-gbe-downlink-port": [1,2,3],
+
+		"mgmt-addr": "10.1.200.99/24",
+		"gateway": "10.1.200.1"
+	},
+	"sample_sw_description": {
+		"port": "機器のFEポート数 (24 or 48のはず)。1-8番ポートをAP、9-16をユーザ向け、末尾を上流、その手前3つを下流向けポートに設定",
+		"use-gbe-uplink-port": "上流向けポートとして使いたいGE0/Xのポート番号, 使わない場合は書かない",
+		"use-gbe-downlink-port": "下流向けとして使いたいGE0/Xのポート番号の配列, 使わない場合は書かない",
+
+		"mgmt-addr": "Vlan3000に生やしたい管理用アドレス",
+		"gateway": "Vlan3000の上流ゲートウェイのアドレス"
+	},
+
+
+	"SW001": {
+		"description": "somewhere1",
+		"port": 48,
+		"use-gbe-uplink-port": 4,
+
+		"mgmt-addr": "10.1.200.X/24",
+		"gateway": "10.1.200.1"
+	},
+	"SW002": {
+		"description": "someshere2",
+		"port": 24,
+
+		"mgmt-addr": "10.1.200.Y/24",
+		"gateway": "10.1.200.1"
+	}
+}

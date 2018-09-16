@@ -1,0 +1,113 @@
+<%#-*- encoding: UTF-8 -*-%>
+<%# C3560向けCONBUっぽいスイッチ設定のためのERBテンプレート -%>
+<%# erase startup-config や delete flash:vlan.dat の後再起動して -%>
+<%# "Switch>"が表示されてから動かすとよしなに設定してくれるはず -%>
+<%# enableしたりconf termするあたりで警告がでますが無視してよし -%>
+
+hostname <%= my["hostname"] %>
+
+enable secret 0 <%= common["secret"] %>
+username <%= common["user"] %> secret 0 <%= common["password"] %>
+
+<%# VLANはMGMTとUSERの2種類のみ -%>
+vtp mode transparent
+vlan 3000
+ name MGMT
+!
+vlan 3001
+ name USER
+!
+
+
+<%# APポート: 1〜8番ポートを割り当て -%>
+interface range FastEthernet 0/1 - 8
+ description APport
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 3000
+ switchport trunk allowed vlan 3000,3001
+ switchport mode trunk
+ switchport protected
+ no shutdown
+!
+
+<%# ユーザポート(配信・有線デモ用): 9〜16番ポートを割り当て -%>
+interface range FastEthernet 0/9 - 16
+ description USERport
+ switchport access vlan 3001
+ switchport mode access
+ switchport protected
+ no shutdown
+!
+
+<%# 下流向けポート: 最老番の手前3つ -%>
+interface range FastEthernet 0/<%= my["downlink-port-head"] %> - <%= my["downlink-port-tail"] %>
+ description DOWNLINK
+ switchport trunk encapsulation dot1q
+ switchport trunk allowed vlan 3000,3001
+ switchport mode trunk
+ switchport protected
+!
+
+<%# 上流向けポート: 最老番を割り当てる(24 or 48), PVLANなし -%>
+interface FastEthernet 0/<%= my["uplink-port"] %>
+ description UPLINK
+ switchport trunk encapsulation dot1q
+ switchport trunk allowed vlan 3000,3001
+ switchport mode trunk
+!
+
+<%# 下流向けポート: GigabitEthernetインタフェースを使う場合 -%>
+<% if my["use-gbe-downlink-ports"].is_a?(Array) -%>
+  <% my["use-gbe-downlink-ports"].each do |portnum| -%>
+interface GigabitEthernet 0/<%= portnum %>
+ description DOWNLINK-gbe
+ switchport trunk allowed vlan 3000,3001
+ switchport mode trunk
+ switchport protected
+!
+  <% end -%>
+<% end -%>
+
+<%# 上流向けポート: GigabitEthernetインタフェースを使う場合 -%>
+<% if my["use-gbe-uplink-port"] -%>
+interface GigabitEthernet 0/<%= my["use-gbe-uplink-port"] %>
+ description UPLINK-gbe
+ switchport trunk encapsulation dot1q
+ switchport trunk allowed vlan 3000,3001
+ switchport mode trunk
+!
+<% end -%>
+
+
+interface Vlan3000
+<% if my["mgmt-addr"] -%>
+ ip address <%= my["mgmt-addr-host"] %> <%= my["mgmt-addr-netmask"] %>
+ no shutdown
+<% end -%>
+!
+ip default-gateway <%= my["gateway"] %>
+ip classless
+
+<%# ACL: クラウドセグメントからのみ許可 %>
+<% if common["acl-cloud-prefix"] -%>
+ip access-list standard CONBU-CLOUD
+ permit <%= common["acl-cloud-network"] %> <%= common["acl-cloud-mask"] %>
+!
+<% end -%>
+
+<%# その他マネジメント系の設定 %>
+logging facility local6
+logging <%= common["syslog-server"] %>
+snmp-server community <%= common["snmp-community"] %> RO CONBU-CLOUD
+snmp-server host <%= common["snmp-server"] %> <%= common["snmp-community"] %>
+spanning-tree portfast default
+line con 0
+ login local
+!
+line vty 0 4
+ access-class CONBU-CLOUD in
+ login local
+line vty 5 15
+ access-class CONBU-CLOUD in
+ login local
+!
